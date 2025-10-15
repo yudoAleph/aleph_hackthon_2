@@ -21,11 +21,6 @@ func SetupRoutes(router *gin.Engine, h *handlers.Handler, jwtSecretKey string) {
 		c.JSON(200, gin.H{"status": "healthy"})
 	})
 
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "healthy"})
-	})
-
 	// Public routes
 	public := router.Group("/api/v1")
 	{

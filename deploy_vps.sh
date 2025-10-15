@@ -39,8 +39,22 @@ if [ $? -ne 0 ]; then
 fi
 
 print_status "2. Stopping any running application..."
-pkill -f "./bin/server" || true
-pkill -f "go run ./cmd/server" || true
+print_status "Checking for existing processes..."
+ps aux | grep -E "(server|go)" | grep -v grep || print_status "No existing processes found"
+
+# Kill any existing server processes more aggressively
+pkill -9 -f "./bin/server" || true
+pkill -9 -f "go run ./cmd/server" || true
+
+# Wait a moment to ensure processes are killed
+sleep 2
+
+# Double check no processes are running on port 8080
+if lsof -ti:8080 > /dev/null 2>&1; then
+    print_warning "Port 8080 still in use, forcing kill..."
+    lsof -ti:8080 | xargs kill -9 || true
+    sleep 1
+fi
 
 print_status "3. Resetting database..."
 mysql -u yudo -p'P@ssw0rd' -e "USE getcontact; DROP TABLE IF EXISTS contacts; DROP TABLE IF EXISTS users; DROP TABLE IF EXISTS schema_migrations;" 2>/dev/null || print_warning "Database reset may have failed - continuing..."
@@ -62,10 +76,25 @@ if [ $? -ne 0 ]; then
 fi
 
 print_status "6. Starting application..."
-./bin/server &
+print_status "Launching ./bin/server..."
+./bin/server > logs/app.log 2>&1 &
+
+# Get the PID of the background process
+SERVER_PID=$!
+print_status "Server started with PID: $SERVER_PID"
 
 # Wait a moment for the app to start
-sleep 3
+sleep 5
+
+# Check if the process is still running
+if kill -0 $SERVER_PID 2>/dev/null; then
+    print_status "Server process is running"
+else
+    print_error "Server process failed to start!"
+    print_status "Checking logs..."
+    tail -20 logs/app.log
+    exit 1
+fi
 
 print_status "7. Testing application health..."
 curl -s -X GET "http://localhost:8080/api/v1/health" > /dev/null
