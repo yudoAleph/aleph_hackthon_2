@@ -48,7 +48,7 @@ func GetMigrations() []Migration {
 				_, err := tx.Exec(`
 					CREATE TABLE IF NOT EXISTS contacts (
 						id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-						user_id BIGINT UNSIGNED NOT NULL,
+						user_id INT UNSIGNED NOT NULL,
 						full_name VARCHAR(255) NOT NULL,
 						phone VARCHAR(20) NOT NULL,
 						email VARCHAR(255) NULL,
