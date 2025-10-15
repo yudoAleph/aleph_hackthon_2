@@ -2,22 +2,26 @@ package main
 
 import (
 	"log"
-	"net/http"
 	"user-service/configs"
-	"user-service/docs"
-	"user-service/internal/app"
-	middlewareApps "user-service/internal/middleware"
+	"user-service/internal/app/handlers"
+	"user-service/internal/app/repository"
+	"user-service/internal/app/routes"
+	"user-service/internal/app/service"
 	"user-service/pkg/db"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	echoSwagger "github.com/swaggo/echo-swagger"
+	"github.com/gin-gonic/gin"
 )
 
-// @securityDefinitions.apikey ApiKeyAuth
+// @title Contact Management API
+// @version 1.0
+// @description This is a contact management server.
+// @termsOfService http://swagger.io/terms/
+
+// @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
 func main() {
+	// Load configuration
 	cfg := configs.LoadConfig()
 
 	// Initialize DB
@@ -26,24 +30,31 @@ func main() {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
 
-	db.AutoMigrate(database)
+	// Run migrations
+	if err := db.RunMigrations(database); err != nil {
+		log.Fatalf("failed to run migrations: %v", err)
+	}
 
-	e := echo.New()
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	// Initialize repository
+	repo := repository.NewRepository(database)
 
-	// Pass database to handlers
-	h := app.NewHandler(cfg, database) // make sure this function accepts *gorm.DB
-	// Public Routes
-	e.GET("/ping", h.Ping)
+	// Initialize service
+	svc := service.NewService(repo, cfg.JWTSecret)
 
-	groupMobile := e.Group("/api/v1/mobile", middleware.BasicAuth(middlewareApps.BasicAuthValidator))
-	groupMobile.POST("/users/:id", h.Get)
+	// Initialize handler
+	handler := handlers.NewHandler(svc, cfg.JWTSecret)
 
-	// Swagger UI and raw OpenAPI JSON
-	docs.SwaggerInfo.BasePath = "/"
-	e.GET("/swagger/*", echoSwagger.WrapHandler)
-	e.GET("/openapi.json", func(c echo.Context) error { return c.JSONBlob(http.StatusOK, []byte(docs.SwaggerInfo.SwaggerTemplate)) })
+	// Set Gin to release mode
+	gin.SetMode(gin.ReleaseMode)
 
-	e.Logger.Fatal(e.Start(":" + cfg.Port))
+	// Initialize Gin router
+	router := gin.New()
+
+	// Configure routes
+	routes.SetupRoutes(router, handler, cfg.JWTSecret)
+
+	// Start server
+	if err := router.Run(":" + cfg.Port); err != nil {
+		log.Fatalf("failed to start server: %v", err)
+	}
 }

@@ -16,6 +16,9 @@
 coverage.*
 *.coverprofile
 profile.cov
+tmp/coverage.*
+tmp/*.out
+tmp/*.html
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -24,8 +27,24 @@ profile.cov
 go.work
 go.work.sum
 
-# env file
+# Environment files
 .env
+configs/.env
+
+# Binaries and build artifacts
+bin/*
+!bin/.gitkeep
+server
+getcontact
+migrate
+
+# Database files
+*.db
+tmp/*.db
+!tmp/.gitkeep
+
+# macOS
+.DS_Store
 
 # Editor/IDE
 # .idea/

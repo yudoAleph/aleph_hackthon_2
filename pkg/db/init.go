@@ -1,24 +1,31 @@
 package db
 
 import (
+	"fmt"
 	"log"
-	"os"
+	"user-service/configs"
 
-	"github.com/glebarez/sqlite"
+	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
 func InitDB() (*gorm.DB, error) {
-	// Get DB name from environment variable, fallback to default if not set
-	dbName := os.Getenv("DB_NAME")
-	if dbName == "" {
-		dbName = "aleph.user_db" // default fallback
-	}
+	cfg := configs.LoadConfig()
 
-	database, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})
+	// Build MySQL DSN (Data Source Name)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBHost,
+		cfg.DBPort,
+		cfg.DBName,
+	)
+
+	database, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Printf("failed to connect to database: %v", err)
 		return nil, err
 	}
+
 	return database, nil
 }

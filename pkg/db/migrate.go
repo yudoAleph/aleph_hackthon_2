@@ -2,22 +2,29 @@ package db
 
 import (
 	"log"
-	"time"
+	"user-service/internal/app/migrations"
 
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
-type User struct {
-	ID          uuid.UUID  `gorm:"type:char(36);primaryKey;" json:"id"` // cross-db safe
-	Username    string     `gorm:"unique;not null" json:"username"`
-	Password    string     `gorm:"not null" json:"-"`
-	CreatedAt   time.Time  `gorm:"autoCreateTime" json:"created_at"`
-	LastLoginAt *time.Time `json:"last_login_at,omitempty"`
-}
+// RunMigrations performs database migrations using the migration system
+func RunMigrations(db *gorm.DB) error {
+	log.Println("Running database migrations...")
 
-func AutoMigrate(db *gorm.DB) {
-	if err := db.AutoMigrate(&User{}); err != nil {
-		log.Fatalf("migration failed: %v", err)
+	// Get the underlying SQL DB from GORM
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
 	}
+
+	// Create migration runner
+	runner := migrations.NewRunner(sqlDB)
+
+	// Run migrations
+	if err := runner.MigrateUp(); err != nil {
+		return err
+	}
+
+	log.Println("Database migrations completed successfully")
+	return nil
 }

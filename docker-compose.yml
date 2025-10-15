@@ -3,6 +3,8 @@ services:
     image: user-service:latest
     ports:
       - "${PORT:-8080}:8080"
+    env_file:
+      - configs/.env
     entrypoint: ["/app"]
     environment:
       PORT: ${PORT:-8080}

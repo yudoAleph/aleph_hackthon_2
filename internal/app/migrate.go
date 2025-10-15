@@ -1,3 +1,0 @@
-package app
-
-// DB Migration

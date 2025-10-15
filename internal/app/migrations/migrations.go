@@ -1,0 +1,116 @@
+package migrations
+
+import (
+	"database/sql"
+)
+
+// Migration represents a database migration
+type Migration struct {
+	ID   string
+	Up   func(*sql.Tx) error
+	Down func(*sql.Tx) error
+}
+
+// GetMigrations returns all available migrations
+func GetMigrations() []Migration {
+	return []Migration{
+		{
+			ID: "001_create_users_table",
+			Up: func(tx *sql.Tx) error {
+				_, err := tx.Exec(`
+					CREATE TABLE IF NOT EXISTS users (
+						id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+						full_name VARCHAR(255) NOT NULL,
+						email VARCHAR(255) NOT NULL UNIQUE,
+						phone VARCHAR(20) NOT NULL,
+						password VARCHAR(255) NOT NULL,
+						avatar_url VARCHAR(255) NULL,
+						created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+						updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+						-- Indexes
+						INDEX idx_users_full_name (full_name),
+						INDEX idx_users_email (email),
+						INDEX idx_users_phone (phone),
+						INDEX idx_users_created_at (created_at)
+					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+				`)
+				return err
+			},
+			Down: func(tx *sql.Tx) error {
+				_, err := tx.Exec(`DROP TABLE IF EXISTS users`)
+				return err
+			},
+		},
+		{
+			ID: "002_create_contacts_table",
+			Up: func(tx *sql.Tx) error {
+				_, err := tx.Exec(`
+					CREATE TABLE IF NOT EXISTS contacts (
+						id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+						user_id BIGINT UNSIGNED NOT NULL,
+						full_name VARCHAR(255) NOT NULL,
+						phone VARCHAR(20) NOT NULL,
+						email VARCHAR(255) NULL,
+						favorite BOOLEAN DEFAULT FALSE,
+						created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+						updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+						-- Foreign key constraint
+						CONSTRAINT fk_contacts_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+
+						-- Indexes
+						INDEX idx_contacts_user_id (user_id),
+						INDEX idx_contacts_full_name (full_name),
+						INDEX idx_contacts_phone (phone),
+						INDEX idx_contacts_email (email),
+						INDEX idx_contacts_favorite (favorite),
+						INDEX idx_contacts_created_at (created_at),
+
+						-- Composite index for common queries
+						INDEX idx_contacts_user_favorite (user_id, favorite),
+						INDEX idx_contacts_user_created (user_id, created_at DESC)
+					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+				`)
+				return err
+			},
+			Down: func(tx *sql.Tx) error {
+				_, err := tx.Exec(`DROP TABLE IF EXISTS contacts`)
+				return err
+			},
+		},
+	}
+}
+
+// CreateMigrationsTable creates the migrations tracking table
+func CreateMigrationsTable(db *sql.DB) error {
+	_, err := db.Exec(`
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			id VARCHAR(255) PRIMARY KEY,
+			applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+	`)
+	return err
+}
+
+// IsMigrationApplied checks if a migration has been applied
+func IsMigrationApplied(db *sql.DB, migrationID string) (bool, error) {
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE id = ?", migrationID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// MarkMigrationApplied marks a migration as applied
+func MarkMigrationApplied(tx *sql.Tx, migrationID string) error {
+	_, err := tx.Exec("INSERT INTO schema_migrations (id) VALUES (?)", migrationID)
+	return err
+}
+
+// MarkMigrationUnapplied removes a migration from the applied list
+func MarkMigrationUnapplied(tx *sql.Tx, migrationID string) error {
+	_, err := tx.Exec("DELETE FROM schema_migrations WHERE id = ?", migrationID)
+	return err
+}
