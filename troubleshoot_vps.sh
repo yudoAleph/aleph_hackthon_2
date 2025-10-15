@@ -115,16 +115,23 @@ else
 fi
 
 print_status "9. Testing health endpoint..."
-if curl -s -f http://localhost:8080/api/v1/health > /dev/null; then
+if curl -s -f http://localhost:8080/health > /dev/null; then
     print_status "✅ Health check passed!"
-    curl -s http://localhost:8080/api/v1/health
+    curl -s http://localhost:8080/health
 else
     print_error "❌ Health check failed!"
+    print_info "Trying /api/v1/health endpoint..."
+    if curl -s -f http://localhost:8080/api/v1/health > /dev/null; then
+        print_info "✅ API health check passed!"
+        curl -s http://localhost:8080/api/v1/health
+    else
+        print_error "❌ Both health endpoints failed!"
+    fi
 fi
 
 print_status "10. Testing external access..."
 EXTERNAL_IP="13.229.87.19"
-if curl -s -f --max-time 10 http://$EXTERNAL_IP:8080/api/v1/health > /dev/null; then
+if curl -s -f --max-time 10 http://$EXTERNAL_IP:8080/health > /dev/null; then
     print_status "✅ External access works!"
 else
     print_warning "❌ External access failed!"
@@ -149,11 +156,11 @@ echo ""
 echo "📋 Summary of findings:"
 echo "- Server PID: $SERVER_PID"
 echo "- Port 8080 status: $(lsof -i :8080 > /dev/null 2>&1 && echo 'IN USE' || echo 'FREE')"
-echo "- Health check: $(curl -s -f http://localhost:8080/api/v1/health > /dev/null 2>&1 && echo 'PASS' || echo 'FAIL')"
-echo "- External access: $(curl -s -f --max-time 5 http://$EXTERNAL_IP:8080/api/v1/health > /dev/null 2>&1 && echo 'WORKING' || echo 'BLOCKED')"
+echo "- Health check: $(curl -s -f http://localhost:8080/health > /dev/null 2>&1 && echo 'PASS' || echo 'FAIL')"
+echo "- External access: $(curl -s -f --max-time 5 http://$EXTERNAL_IP:8080/health > /dev/null 2>&1 && echo 'WORKING' || echo 'BLOCKED')"
 echo ""
 echo "🔧 Useful commands:"
 echo "- Check logs: tail -f logs/app.log"
 echo "- Restart app: pkill -f './bin/server' && ./bin/server &"
-echo "- Test API: curl http://localhost:8080/api/v1/health"
-echo "- Check port: netstat -tlnp | grep 8080"
+echo "- Test API: curl http://localhost:8080/health"
+echo "- Check port: ss -tlnp | grep 8080 || netstat -tlnp | grep 8080"
