@@ -42,6 +42,12 @@ getcontact
 tmp/*.db
 !tmp/.gitkeep
 
+# Log files
+*.log
+logs/
+internal/app/logs/
+internal/middleware/logs/
+
 # macOS
 .DS_Store
 
