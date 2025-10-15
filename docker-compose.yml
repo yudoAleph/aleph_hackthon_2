@@ -1,0 +1,13 @@
+services:
+  user-service:
+    image: user-service:latest
+    ports:
+      - "${PORT:-8080}:8080"
+    entrypoint: ["/app"]
+    environment:
+      PORT: ${PORT:-8080}
+      JWT_SECRET: ${JWT_SECRET}
+      SIGNATURE_SECRET: ${SIGNATURE_SECRET}
+      DB_NAME: ${DB_NAME}
+      BASIC_AUTH_USERNAME: ${BASIC_AUTH_USERNAME}
+      BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD}
