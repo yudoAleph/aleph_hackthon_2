@@ -34,9 +34,14 @@ type Config struct {
 
 // LoadConfig loads configuration from environment variables
 func LoadConfig() Config {
+	// Try to load .env from root directory first
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("Warning: .env file not found, using environment variables")
+		// If not found, try configs/.env
+		err = godotenv.Load("configs/.env")
+		if err != nil {
+			log.Println("Warning: .env file not found in root or configs/ directory, using environment variables")
+		}
 	}
 
 	config := Config{
