@@ -86,7 +86,8 @@ func GetMigrations() []Migration {
 func CreateMigrationsTable(db *sql.DB) error {
 	_, err := db.Exec(`
 		CREATE TABLE IF NOT EXISTS schema_migrations (
-			id VARCHAR(255) PRIMARY KEY,
+			version VARCHAR(255) PRIMARY KEY,
+			name VARCHAR(255) NOT NULL,
 			applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 	`)
@@ -96,7 +97,7 @@ func CreateMigrationsTable(db *sql.DB) error {
 // IsMigrationApplied checks if a migration has been applied
 func IsMigrationApplied(db *sql.DB, migrationID string) (bool, error) {
 	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE id = ?", migrationID).Scan(&count)
+	err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE version = ?", migrationID).Scan(&count)
 	if err != nil {
 		return false, err
 	}
@@ -105,12 +106,12 @@ func IsMigrationApplied(db *sql.DB, migrationID string) (bool, error) {
 
 // MarkMigrationApplied marks a migration as applied
 func MarkMigrationApplied(tx *sql.Tx, migrationID string) error {
-	_, err := tx.Exec("INSERT INTO schema_migrations (id) VALUES (?)", migrationID)
+	_, err := tx.Exec("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, NOW())", migrationID, migrationID)
 	return err
 }
 
 // MarkMigrationUnapplied removes a migration from the applied list
 func MarkMigrationUnapplied(tx *sql.Tx, migrationID string) error {
-	_, err := tx.Exec("DELETE FROM schema_migrations WHERE id = ?", migrationID)
+	_, err := tx.Exec("DELETE FROM schema_migrations WHERE version = ?", migrationID)
 	return err
 }

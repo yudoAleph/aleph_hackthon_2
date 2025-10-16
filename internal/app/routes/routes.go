@@ -24,8 +24,8 @@ func SetupRoutes(router *gin.Engine, h *handlers.Handler, jwtSecretKey string) {
 	// Public routes
 	public := router.Group("/api/v1")
 	{
-		public.POST("/register", h.Register)
-		public.POST("/login", h.Login)
+		public.POST("/auth/register", h.Register)
+		public.POST("/auth/login", h.Login)
 	}
 
 	// Protected routes
@@ -33,8 +33,8 @@ func SetupRoutes(router *gin.Engine, h *handlers.Handler, jwtSecretKey string) {
 	protected.Use(middleware.AuthMiddleware(jwtSecretKey))
 	{
 		// User routes
-		protected.GET("/profile", h.GetProfile)
-		protected.PUT("/profile", h.UpdateProfile)
+		protected.GET("/me", h.GetProfile)
+		protected.PUT("/me", h.UpdateProfile)
 
 		// Contact routes
 		contacts := protected.Group("/contacts")

@@ -95,10 +95,10 @@ func setupTestRouter(mockService *MockService) *gin.Engine {
 	handler := handlers.NewHandler(mockService, "test_secret")
 
 	// Setup routes
-	api := router.Group("/api")
+	api := router.Group("/api/v1")
 	{
-		api.POST("/register", handler.Register)
-		api.POST("/login", handler.Login)
+		api.POST("/auth/register", handler.Register)
+		api.POST("/auth/login", handler.Login)
 
 		protected := api.Group("")
 		protected.Use(func(c *gin.Context) {
@@ -107,8 +107,8 @@ func setupTestRouter(mockService *MockService) *gin.Engine {
 			c.Next()
 		})
 		{
-			protected.GET("/profile", handler.GetProfile)
-			protected.PUT("/profile", handler.UpdateProfile)
+			protected.GET("/me", handler.GetProfile)
+			protected.PUT("/me", handler.UpdateProfile)
 
 			protected.GET("/contacts", handler.ListContacts)
 			protected.POST("/contacts", handler.CreateContact)
@@ -144,7 +144,7 @@ func TestHandler_Register(t *testing.T) {
 
 		body, _ := json.Marshal(req)
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("POST", "/api/register", bytes.NewBuffer(body))
+		httpReq, _ := http.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(body))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -165,7 +165,7 @@ func TestHandler_Register(t *testing.T) {
 
 	t.Run("invalid request format", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("POST", "/api/register", bytes.NewBufferString("invalid json"))
+		httpReq, _ := http.NewRequest("POST", "/api/v1/auth/register", bytes.NewBufferString("invalid json"))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -192,7 +192,7 @@ func TestHandler_Register(t *testing.T) {
 
 		body, _ := json.Marshal(req)
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("POST", "/api/register", bytes.NewBuffer(body))
+		httpReq, _ := http.NewRequest("POST", "/api/v1/auth/register", bytes.NewBuffer(body))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -232,7 +232,7 @@ func TestHandler_Login(t *testing.T) {
 
 		body, _ := json.Marshal(req)
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("POST", "/api/login", bytes.NewBuffer(body))
+		httpReq, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(body))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -252,7 +252,7 @@ func TestHandler_Login(t *testing.T) {
 
 	t.Run("invalid request format", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("POST", "/api/login", bytes.NewBufferString("invalid json"))
+		httpReq, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBufferString("invalid json"))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -277,7 +277,7 @@ func TestHandler_Login(t *testing.T) {
 
 		body, _ := json.Marshal(req)
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("POST", "/api/login", bytes.NewBuffer(body))
+		httpReq, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(body))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -309,7 +309,7 @@ func TestHandler_GetProfile(t *testing.T) {
 		mockService.On("GetUserProfile", mock.Anything, userID).Return(expectedUser, nil).Once()
 
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("GET", "/api/profile", nil)
+		httpReq, _ := http.NewRequest("GET", "/api/v1/me", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -337,7 +337,7 @@ func TestHandler_GetProfile(t *testing.T) {
 		mockService.On("GetUserProfile", mock.Anything, userID).Return(nil, assert.AnError).Once()
 
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("GET", "/api/profile", nil)
+		httpReq, _ := http.NewRequest("GET", "/api/v1/me", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -374,7 +374,7 @@ func TestHandler_UpdateProfile(t *testing.T) {
 
 		body, _ := json.Marshal(req)
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("PUT", "/api/profile", bytes.NewBuffer(body))
+		httpReq, _ := http.NewRequest("PUT", "/api/v1/me", bytes.NewBuffer(body))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -399,7 +399,7 @@ func TestHandler_UpdateProfile(t *testing.T) {
 
 	t.Run("invalid request format", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("PUT", "/api/profile", bytes.NewBufferString("invalid json"))
+		httpReq, _ := http.NewRequest("PUT", "/api/v1/me", bytes.NewBufferString("invalid json"))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -435,7 +435,7 @@ func TestHandler_ListContacts(t *testing.T) {
 		mockService.On("ListContacts", mock.Anything, userID, req).Return(expectedContacts, expectedTotal, nil).Once()
 
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("GET", "/api/contacts?page=1&limit=10", nil)
+		httpReq, _ := http.NewRequest("GET", "/api/v1/contacts?page=1&limit=10", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -458,7 +458,7 @@ func TestHandler_ListContacts(t *testing.T) {
 
 	t.Run("invalid query parameters", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("GET", "/api/contacts?page=invalid", nil)
+		httpReq, _ := http.NewRequest("GET", "/api/v1/contacts?page=invalid", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -495,7 +495,7 @@ func TestHandler_CreateContact(t *testing.T) {
 
 		body, _ := json.Marshal(req)
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("POST", "/api/contacts", bytes.NewBuffer(body))
+		httpReq, _ := http.NewRequest("POST", "/api/v1/contacts", bytes.NewBuffer(body))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -519,7 +519,7 @@ func TestHandler_CreateContact(t *testing.T) {
 
 	t.Run("invalid request format", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("POST", "/api/contacts", bytes.NewBufferString("invalid json"))
+		httpReq, _ := http.NewRequest("POST", "/api/v1/contacts", bytes.NewBufferString("invalid json"))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -553,7 +553,7 @@ func TestHandler_GetContact(t *testing.T) {
 		mockService.On("GetContact", mock.Anything, userID, contactID).Return(expectedContact, nil).Once()
 
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("GET", "/api/contacts/1", nil)
+		httpReq, _ := http.NewRequest("GET", "/api/v1/contacts/1", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -576,7 +576,7 @@ func TestHandler_GetContact(t *testing.T) {
 
 	t.Run("invalid contact ID", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("GET", "/api/contacts/invalid", nil)
+		httpReq, _ := http.NewRequest("GET", "/api/v1/contacts/invalid", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -597,7 +597,7 @@ func TestHandler_GetContact(t *testing.T) {
 		mockService.On("GetContact", mock.Anything, userID, contactID).Return(nil, assert.AnError).Once()
 
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("GET", "/api/contacts/999", nil)
+		httpReq, _ := http.NewRequest("GET", "/api/v1/contacts/999", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -635,7 +635,7 @@ func TestHandler_UpdateContact(t *testing.T) {
 
 		body, _ := json.Marshal(req)
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("PUT", "/api/contacts/1", bytes.NewBuffer(body))
+		httpReq, _ := http.NewRequest("PUT", "/api/v1/contacts/1", bytes.NewBuffer(body))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -659,7 +659,7 @@ func TestHandler_UpdateContact(t *testing.T) {
 
 	t.Run("invalid contact ID", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("PUT", "/api/contacts/invalid", bytes.NewBufferString(`{"full_name":"test","phone":"123"}`))
+		httpReq, _ := http.NewRequest("PUT", "/api/v1/contacts/invalid", bytes.NewBufferString(`{"full_name":"test","phone":"123"}`))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -676,7 +676,7 @@ func TestHandler_UpdateContact(t *testing.T) {
 
 	t.Run("invalid request format", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("PUT", "/api/contacts/1", bytes.NewBufferString("{}"))
+		httpReq, _ := http.NewRequest("PUT", "/api/v1/contacts/1", bytes.NewBufferString("{}"))
 		httpReq.Header.Set("Content-Type", "application/json")
 
 		router.ServeHTTP(w, httpReq)
@@ -703,7 +703,7 @@ func TestHandler_DeleteContact(t *testing.T) {
 		mockService.On("DeleteContact", mock.Anything, userID, contactID).Return(nil).Once()
 
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("DELETE", "/api/contacts/1", nil)
+		httpReq, _ := http.NewRequest("DELETE", "/api/v1/contacts/1", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -721,7 +721,7 @@ func TestHandler_DeleteContact(t *testing.T) {
 
 	t.Run("invalid contact ID", func(t *testing.T) {
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("DELETE", "/api/contacts/invalid", nil)
+		httpReq, _ := http.NewRequest("DELETE", "/api/v1/contacts/invalid", nil)
 
 		router.ServeHTTP(w, httpReq)
 
@@ -742,7 +742,7 @@ func TestHandler_DeleteContact(t *testing.T) {
 		mockService.On("DeleteContact", mock.Anything, userID, contactID).Return(assert.AnError).Once()
 
 		w := httptest.NewRecorder()
-		httpReq, _ := http.NewRequest("DELETE", "/api/contacts/999", nil)
+		httpReq, _ := http.NewRequest("DELETE", "/api/v1/contacts/999", nil)
 
 		router.ServeHTTP(w, httpReq)
 

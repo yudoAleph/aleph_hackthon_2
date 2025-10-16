@@ -24,7 +24,7 @@ curl -X GET "http://localhost:8080/health" \
 ### 1. User Registration
 
 ```bash
-curl -X POST "http://localhost:8080/api/v1/register" \
+curl -X POST "http://localhost:8080/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d '{
     "full_name": "John Doe",
@@ -61,7 +61,7 @@ curl -X POST "http://localhost:8080/api/v1/register" \
 ### 2. User Login
 
 ```bash
-curl -X POST "http://localhost:8080/api/v1/login" \
+curl -X POST "http://localhost:8080/api/v1/auth/login" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "john.doe@example.com",
@@ -93,7 +93,7 @@ curl -X POST "http://localhost:8080/api/v1/login" \
 ### 3. Get User Profile
 
 ```bash
-curl -X GET "http://localhost:8080/api/v1/profile" \
+curl -X GET "http://localhost:8080/api/v1/me" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
@@ -118,7 +118,7 @@ curl -X GET "http://localhost:8080/api/v1/profile" \
 ### 4. Update User Profile
 
 ```bash
-curl -X PUT "http://localhost:8080/api/v1/profile" \
+curl -X PUT "http://localhost:8080/api/v1/me" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
@@ -377,7 +377,7 @@ curl -s -X GET "$BASE_URL/health" | jq .
 
 # 2. Register User
 echo -e "\n2. Register User:"
-REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/register" \
+REGISTER_RESPONSE=$(curl -s -X POST "$BASE_URL/api/v1/auth/register" \
   -H "Content-Type: application/json" \
   -d '{
     "full_name": "Test User",

@@ -80,21 +80,21 @@ ENVIRONMENT=development
 
 ### Authentication
 
-- `POST /api/v1/register` - User registration
-- `POST /api/v1/login` - User login
+- `POST /api/v1/auth/register` - User registration
+- `POST /api/v1/auth/login` - User login
 
 ### Contacts (Protected routes)
 
-- `GET /api/v1/contacts` - List contacts with search/pagination
+- `GET /api/v1/contacts?q=&page=1&limit=20` - List contacts with search/pagination
 - `POST /api/v1/contacts` - Create new contact
-- `GET /api/v1/contacts/:id` - Get contact details
-- `PUT /api/v1/contacts/:id` - Update contact
-- `DELETE /api/v1/contacts/:id` - Delete contact
+- `GET /api/v1/contacts/{id}` - Get contact details
+- `PUT /api/v1/contacts/{id}` - Update contact
+- `DELETE /api/v1/contacts/{id}` - Delete contact
 
 ### User Profile
 
-- `GET /api/v1/profile` - Get user profile
-- `PUT /api/v1/profile` - Update user profile
+- `GET /api/v1/me` - Get user profile
+- `PUT /api/v1/me` - Update user profile
 
 ## Database Schema
 
