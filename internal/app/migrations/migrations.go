@@ -79,6 +79,52 @@ func GetMigrations() []Migration {
 				return err
 			},
 		},
+		{
+			ID: "003_fix_schema_migrations_table",
+			Up: func(tx *sql.Tx) error {
+				// Drop the old table if it exists with wrong structure
+				_, err := tx.Exec(`DROP TABLE IF EXISTS schema_migrations_old`)
+				if err != nil {
+					return err
+				}
+
+				// Rename existing table if it has wrong structure
+				_, err = tx.Exec(`ALTER TABLE schema_migrations RENAME TO schema_migrations_old`)
+				if err != nil {
+					// If rename fails, table might not exist or already have correct structure
+					// Just ensure the table exists with correct structure
+				}
+
+				// Create the table with correct structure (this is idempotent)
+				_, err = tx.Exec(`
+					CREATE TABLE IF NOT EXISTS schema_migrations (
+						version VARCHAR(255) PRIMARY KEY,
+						name VARCHAR(255) NOT NULL,
+						applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+					) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+				`)
+				if err != nil {
+					return err
+				}
+
+				// If we renamed the old table, migrate the data
+				_, err = tx.Exec(`
+					INSERT IGNORE INTO schema_migrations (version, name, applied_at)
+					SELECT id, name, applied_at FROM schema_migrations_old
+				`)
+				if err != nil {
+					return err
+				}
+
+				// Drop the old table
+				_, err = tx.Exec(`DROP TABLE IF EXISTS schema_migrations_old`)
+				return err
+			},
+			Down: func(tx *sql.Tx) error {
+				// This migration is not reversible as it's a fix
+				return nil
+			},
+		},
 	}
 }
 
@@ -97,21 +143,36 @@ func CreateMigrationsTable(db *sql.DB) error {
 // IsMigrationApplied checks if a migration has been applied
 func IsMigrationApplied(db *sql.DB, migrationID string) (bool, error) {
 	var count int
+	// Try with 'version' column first (new structure)
 	err := db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE version = ?", migrationID).Scan(&count)
 	if err != nil {
-		return false, err
+		// If that fails, try with 'id' column (old structure)
+		err = db.QueryRow("SELECT COUNT(*) FROM schema_migrations WHERE id = ?", migrationID).Scan(&count)
+		if err != nil {
+			return false, err
+		}
 	}
 	return count > 0, nil
 }
 
 // MarkMigrationApplied marks a migration as applied
 func MarkMigrationApplied(tx *sql.Tx, migrationID string) error {
+	// Try with 'version' column first (new structure)
 	_, err := tx.Exec("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, NOW())", migrationID, migrationID)
+	if err != nil {
+		// If that fails, try with 'id' column (old structure)
+		_, err = tx.Exec("INSERT INTO schema_migrations (id, name, applied_at) VALUES (?, ?, NOW())", migrationID, migrationID)
+	}
 	return err
 }
 
 // MarkMigrationUnapplied removes a migration from the applied list
 func MarkMigrationUnapplied(tx *sql.Tx, migrationID string) error {
+	// Try with 'version' column first (new structure)
 	_, err := tx.Exec("DELETE FROM schema_migrations WHERE version = ?", migrationID)
+	if err != nil {
+		// If that fails, try with 'id' column (old structure)
+		_, err = tx.Exec("DELETE FROM schema_migrations WHERE id = ?", migrationID)
+	}
 	return err
 }
