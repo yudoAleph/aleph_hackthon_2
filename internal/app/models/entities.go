@@ -7,7 +7,7 @@ type User struct {
 	ID        uint      `gorm:"primaryKey;autoIncrement" json:"id"`
 	FullName  string    `gorm:"type:varchar(255);not null;index:idx_users_full_name" json:"full_name"`
 	Email     string    `gorm:"type:varchar(255);unique;not null;index:idx_users_email" json:"email"`
-	Phone     string    `gorm:"type:varchar(20);not null;index:idx_users_phone" json:"phone"`
+	Phone     *string   `gorm:"type:varchar(20);index:idx_users_phone" json:"phone,omitempty"`
 	Password  string    `gorm:"type:varchar(255);not null" json:"-"`
 	AvatarURL *string   `gorm:"type:varchar(255)" json:"avatar_url"`
 	CreatedAt time.Time `gorm:"autoCreateTime;index:idx_users_created_at" json:"-"`

@@ -54,3 +54,4 @@ internal/middleware/logs/
 # Editor/IDE
 # .idea/
 # .vscode/
+server.pid

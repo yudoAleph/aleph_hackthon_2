@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"regexp"
+	"strings"
 	"user-service/internal/app/models"
 	"user-service/internal/app/repository"
 
@@ -15,6 +17,7 @@ var (
 	ErrEmailTaken         = errors.New("email is already taken")
 	ErrContactNotFound    = errors.New("contact not found")
 	ErrPhoneExists        = errors.New("phone number already exists for this user")
+	ErrInvalidPhone       = errors.New("phone number must contain only digits (0-9)")
 )
 
 type Service interface {
@@ -44,6 +47,13 @@ func NewService(repo repository.Repository, jwtSecret string) Service {
 
 // Register creates a new user account
 func (s *service) Register(ctx context.Context, req models.RegisterRequest) (*models.User, error) {
+	// Validate phone if provided
+	if req.Phone != nil && *req.Phone != "" {
+		if err := validatePhone(*req.Phone); err != nil {
+			return nil, err
+		}
+	}
+
 	// Check if email already exists
 	existingUser, err := s.repo.GetUserByEmail(ctx, req.Email)
 	if err == nil && existingUser != nil {
@@ -75,8 +85,11 @@ func (s *service) UpdateProfile(ctx context.Context, userID uint, req models.Upd
 	if req.FullName != "" {
 		updates["full_name"] = req.FullName
 	}
-	if req.Phone != "" {
-		updates["phone"] = req.Phone
+	if req.Phone != nil && *req.Phone != "" {
+		if err := validatePhone(*req.Phone); err != nil {
+			return nil, err
+		}
+		updates["phone"] = *req.Phone
 	}
 
 	return s.repo.UpdateUser(ctx, userID, updates)
@@ -181,4 +194,23 @@ func (s *service) Login(ctx context.Context, req models.LoginRequest) (map[strin
 			AccessToken: tokenString,
 		},
 	}, nil
+}
+
+// validatePhone checks if phone number contains only digits
+func validatePhone(phone string) error {
+	// Remove whitespace
+	phone = strings.TrimSpace(phone)
+
+	// Check if empty after trimming
+	if phone == "" {
+		return nil // Empty is allowed since it's optional
+	}
+
+	// Check if contains only digits
+	phoneRegex := regexp.MustCompile(`^[0-9]+$`)
+	if !phoneRegex.MatchString(phone) {
+		return ErrInvalidPhone
+	}
+
+	return nil
 }

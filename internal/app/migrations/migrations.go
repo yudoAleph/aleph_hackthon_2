@@ -180,6 +180,25 @@ func GetMigrations() []Migration {
 				return nil
 			},
 		},
+		{
+			ID: "004_make_phone_optional",
+			Up: func(tx *sql.Tx) error {
+				// Make phone column nullable in users table
+				_, err := tx.Exec(`
+					ALTER TABLE users 
+					MODIFY COLUMN phone VARCHAR(20) NULL DEFAULT NULL
+				`)
+				return err
+			},
+			Down: func(tx *sql.Tx) error {
+				// Revert phone column to NOT NULL
+				_, err := tx.Exec(`
+					ALTER TABLE users 
+					MODIFY COLUMN phone VARCHAR(20) NOT NULL
+				`)
+				return err
+			},
+		},
 	}
 }
 

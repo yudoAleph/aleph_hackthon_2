@@ -7,10 +7,10 @@ type TokenResponse struct {
 
 // RegisterRequest represents the registration request structure
 type RegisterRequest struct {
-	FullName string `json:"full_name" binding:"required"`
-	Email    string `json:"email" binding:"required,email"`
-	Phone    string `json:"phone" binding:"required"`
-	Password string `json:"password" binding:"required,min=8"`
+	FullName string  `json:"full_name" binding:"required"`
+	Email    string  `json:"email" binding:"required,email"`
+	Phone    *string `json:"phone,omitempty"`
+	Password string  `json:"password" binding:"required,min=8"`
 }
 
 // LoginRequest represents the login request structure
@@ -21,8 +21,8 @@ type LoginRequest struct {
 
 // UpdateProfileRequest represents the profile update request structure
 type UpdateProfileRequest struct {
-	FullName string `json:"full_name" binding:"required"`
-	Phone    string `json:"phone" binding:"required"`
+	FullName string  `json:"full_name" binding:"required"`
+	Phone    *string `json:"phone,omitempty"`
 }
 
 // CreateContactRequest represents the create contact request structure

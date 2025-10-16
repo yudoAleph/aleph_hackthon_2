@@ -2,8 +2,8 @@
 run:
 	go run ./cmd/server/main.go
 
-kill-8080:
-	lsof -ti:8080 | xargs kill -9 || true
+kill-9001:
+	lsof -ti:9001 | xargs kill -9 || true
 
 # Database migration commands
 migrate-up:
