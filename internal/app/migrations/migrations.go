@@ -82,22 +82,66 @@ func GetMigrations() []Migration {
 		{
 			ID: "003_fix_schema_migrations_table",
 			Up: func(tx *sql.Tx) error {
-				// Drop the old table if it exists with wrong structure
-				_, err := tx.Exec(`DROP TABLE IF EXISTS schema_migrations_old`)
+				// Check if the table exists and what columns it has
+				var tableExists bool
+				err := tx.QueryRow("SHOW TABLES LIKE 'schema_migrations'").Scan(&tableExists)
+				if err != nil && err.Error() != "sql: no rows in result set" {
+					// Table doesn't exist, just create it
+					_, err = tx.Exec(`
+						CREATE TABLE IF NOT EXISTS schema_migrations (
+							version VARCHAR(255) PRIMARY KEY,
+							name VARCHAR(255) NOT NULL,
+							applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+						) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+					`)
+					return err
+				}
+
+				// Table exists, check its structure
+				rows, err := tx.Query("DESCRIBE schema_migrations")
+				if err != nil {
+					return err
+				}
+				defer rows.Close()
+
+				var columns []string
+				for rows.Next() {
+					var field, typ, null, key, def, extra string
+					if err := rows.Scan(&field, &typ, &null, &key, &def, &extra); err != nil {
+						return err
+					}
+					columns = append(columns, field)
+				}
+
+				// Check if it has the old structure (id column)
+				hasIdColumn := false
+				hasNameColumn := false
+				hasVersionColumn := false
+				for _, col := range columns {
+					switch col {
+					case "id":
+						hasIdColumn = true
+					case "name":
+						hasNameColumn = true
+					case "version":
+						hasVersionColumn = true
+					}
+				}
+
+				if hasVersionColumn && hasNameColumn {
+					// Table already has correct structure, nothing to do
+					return nil
+				}
+
+				// Rename existing table
+				_, err = tx.Exec("ALTER TABLE schema_migrations RENAME TO schema_migrations_old")
 				if err != nil {
 					return err
 				}
 
-				// Rename existing table if it has wrong structure
-				_, err = tx.Exec(`ALTER TABLE schema_migrations RENAME TO schema_migrations_old`)
-				if err != nil {
-					// If rename fails, table might not exist or already have correct structure
-					// Just ensure the table exists with correct structure
-				}
-
-				// Create the table with correct structure (this is idempotent)
+				// Create new table with correct structure
 				_, err = tx.Exec(`
-					CREATE TABLE IF NOT EXISTS schema_migrations (
+					CREATE TABLE schema_migrations (
 						version VARCHAR(255) PRIMARY KEY,
 						name VARCHAR(255) NOT NULL,
 						applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -107,17 +151,28 @@ func GetMigrations() []Migration {
 					return err
 				}
 
-				// If we renamed the old table, migrate the data
-				_, err = tx.Exec(`
-					INSERT IGNORE INTO schema_migrations (version, name, applied_at)
-					SELECT id, name, applied_at FROM schema_migrations_old
-				`)
+				// Migrate data based on old table structure
+				if hasIdColumn && hasNameColumn {
+					// Old table has id and name columns
+					_, err = tx.Exec(`
+						INSERT INTO schema_migrations (version, name, applied_at)
+						SELECT id, name, applied_at FROM schema_migrations_old
+					`)
+				} else if hasIdColumn {
+					// Old table has only id column, use id as name too
+					_, err = tx.Exec(`
+						INSERT INTO schema_migrations (version, name, applied_at)
+						SELECT id, id, applied_at FROM schema_migrations_old
+					`)
+				}
+				// If neither, table was empty anyway
+
 				if err != nil {
 					return err
 				}
 
 				// Drop the old table
-				_, err = tx.Exec(`DROP TABLE IF EXISTS schema_migrations_old`)
+				_, err = tx.Exec("DROP TABLE schema_migrations_old")
 				return err
 			},
 			Down: func(tx *sql.Tx) error {
